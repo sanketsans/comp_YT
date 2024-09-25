@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Link Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        .quiz-container {
+            display: flex; /*flex*/
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .quiz-item {
+            width: 200px;
+            text-align: center;
+        }
+        .quiz-item img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        .quiz-item p {
+            margin: 10px 0;
+        }
+        .quiz-item input[type="radio"] {
+            margin-top: 5px;
+        }
+        #options {
+            margin-bottom: 20px;
+            transition: margin-top 0.5s ease-in-out;
+        }
+        #options select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input {
+            width: 70%;
+            padding: 8px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+        }
+        #result-box {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #result {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        #hint-container {
+            margin-top: 20px;
+        }
+        #hint-btn {
+            padding: 10px;
+            cursor: pointer;
+        }
+        #loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes burst {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes vibrate {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(5px); }
+            50% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+            100% { transform: translateX(0); }
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        #overlay-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 1001;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeInOut 2s;
+        }
+    </style>
+</head>
+<body>
+    <h1>YouTube Mystery Challenge: Can You Guess the Video?</h1>
+
+    <div id="options">
+        <select id="dropdown" onchange="selectOption(this.value)">
+            <option value="search" disabled selected>Select an option</option>
+            <option value="videos">Channel</option>
+            <option value="shorts">Shorts</option>
+            <option value="streams">Streams</option>
+            <option value="search">Search</option>
+        </select>
+    </div>
+
+    <div id="options">
+        <select id="dropdown1" onchange="selectOptionType(this.value)">
+            <option value="text" disabled selected>Select an option</option>
+            <option value="text">Text</option>
+            <option value="image">GenAI</option>
+        </select>
+    </div>
+
+    <!-- Loading container -->
+    <div id="loading-container">
+        <div id="loading-spinner"></div>
+        Generating Hint...
+    </div>
+    <!-- Loading container -->
+
+    <div class="quiz-container">
+        <div class="quiz-item">
+            <img src="https://picsum.photos/id/114/200/300?grayscale" alt="Option 1" id="image1">
+            <input type="radio" name="selectedOption" id="radio1" value="1"> Select
+            <p><a href="#" id="link1" target="_blank">Link 1</a></p>
+        </div>
+        <div class="quiz-item">
+            <img src="https://picsum.photos/id/114/200/300?grayscale" alt="Option 2" id="image2">
+            <input type="radio" name="selectedOption" id="radio2" value="2"> Select
+            <p><a href="#" id="link2" target="_blank">Link 2</a></p>
+        </div>
+        <div class="quiz-item">
+            <img src="https://picsum.photos/id/114/200/300?grayscale" alt="Option 3" id="image3">
+            <input type="radio" name="selectedOption" id="radio3" value="3"> Select
+            <p><a href="#" id="link3" target="_blank">Link 3</a></p>
+        </div>
+        <div class="quiz-item">
+            <img src="https://picsum.photos/id/114/200/300?grayscale" alt="Option 4" id="image4">
+            <input type="radio" name="selectedOption" id="radio4" value="4"> Select
+            <p><a href="#" id="link4" target="_blank">Link 4</a></p>
+        </div>
+    </div>
+    <button type="button" onclick="checkSelectedOption()">Check Selected Option</button>
+
+    <form id="youtube-form">
+        <label for="youtubeLink">Search YouTube:</label>
+        <input type="text" id="youtubeLink" name="youtubeLink" placeholder="Enter search keywords: " required>
+        <button type="button" onclick="checkYouTubeLink()">Generate New!</button>
+    </form>
+    <!-- Add the text box below the YouTube form -->
+    <div id="hint-description">
+        <p>Guess the video based on the hint below:</p>
+    </div>
+
+    <div id="result-box">
+        <div id="result"></div>
+        <div id="image-container"></div>
+    </div>
+
+    <div id="hint-container">
+        <!-- Hints will be displayed here -->
+    </div>
+
+    <button type="button" id="hint-btn" onclick="showHint()">Show More Hints</button>
+    <div id="overlay-text"></div>
+
+
+    <script>
+        var target_vid_id;
+        var hints;
+        var currentIndex = 0;
+        var hint_type = "text";
+
+        function selectOption(option) {
+            if (option === "") return;
+            // alert('Switching gears');
+            checkYouTubeLink();
+
+            // Reset the dropdown to the default option
+            // document.getElementById('dropdown').value = "";
+        }
+     
+        function selectOptionType(option) {
+            if (option === "") return;
+            if (option === "text"){
+                var imageContainer = document.getElementById('image-container');
+                imageContainer.textContent = " "
+            }
+            else{
+                var resultDiv = document.getElementById('result');
+                resultDiv.textContent = " "
+            }
+            // alert('Changing Models !');
+            checkYouTubeLink()
+        }
+     
+        function checkYouTubeLink() {
+            var selectedOption = document.getElementById('dropdown').value;
+            var youtubeLink = document.getElementById('youtubeLink').value.trim();
+            hint_type = document.getElementById('dropdown1').value;
+            // Simple URL validation for YouTube
+            // if (selectedOption != "search"){
+            //     var youtubeRegex = /^(https?:\/\/)?(www\.)?youtube\.com\//;
+            //     if (!youtubeRegex.test(youtubeLink)) {
+            //         alert('Invalid YouTube URL. Please enter a valid YouTube link.');
+            //         return;
+            //     }
+            // }
+            disableButtons();
+            var curr_status = document.getElementById('hint-description');
+            curr_status.textContent = "Fetching clips...";
+
+
+            // Send the YouTube link to the backend
+            fetch('/check_youtube_link', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ 'youtubeLink': youtubeLink , 'selectedOption': selectedOption, 'hint_type': hint_type}),
+            })
+            .then(response => response.json())
+            .then(data =>{
+                target_vid_id = data.target;
+                hints = data.hints;
+                displayResult(data.message, data.image_links, data.success)
+            })
+            .catch(error => console.error('Error:', error))
+            .finally(() => {
+                enableButtons();
+                curr_status.textContent = "Guess the video based on the hint below:";
+            });
+        }
+
+        function showHint() {
+            // Make a request to the backend to fetch hints
+            console.log(hints, currentIndex);
+            disableButtons();
+            showLoadingAnimation();
+
+            fetch('/get_new_hint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 'hint_type': hint_type, 'all_hints': JSON.stringify(hints), 'curr_idx': currentIndex }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update currentIndex and display the hint
+                    if (hint_type === "text") {
+                        var resultDiv = document.getElementById('result');
+                        resultDiv.innerHTML = data.hint;
+                    } else {
+                        var imageContainer = document.getElementById('image-container');
+                        imageContainer.innerHTML = data.hint;
+                        console.log("Img hint added !")
+                    }
+                    currentIndex++; 
+                } else {
+                    alert('No more hints!');
+                }
+            })
+            .catch(error => console.error('Error:', error))
+            .finally(() => {
+                enableButtons();
+                hideLoadingAnimation();
+            });
+        }
+
+        function displayResult(message, image_links, success) {
+            var resultBox = document.getElementById('result-box');
+            // var hint_type = document.getElementById('dropdown1').value;
+
+            // Replace "\n" with an actual newline character in the HTML content
+            // message = message.replace(/\n/g, '<br>');
+            console.log(imageLinks);
+
+            if (success) {
+                resultBox.style.backgroundColor = '#d4edda';  // Success background color
+                resultBox.style.border = '1px solid #c3e6cb';   // Success border color
+                
+                var imageLinks = image_links;
+                // Display images in the respective img elements
+                for (var i = 0; i < imageLinks.length; i++) {
+                    var imgElement = document.getElementById('image' + (i + 1));
+                    imgElement.src = imageLinks[i][0];
+
+                    var elementValue = document.getElementById('radio' + (i+1));
+                    elementValue.value = imageLinks[i][2];
+
+                    var linkElement = document.getElementById('link' + (i + 1));
+                    linkElement.href = imageLinks[i][1];
+                    if (hint_type == "image"){
+                        linkElement.textContent = imageLinks[i][3] 
+                    }
+                    else{
+                        linkElement.textContent = 'Orig video ';
+                    }
+                }
+
+                currentIndex = 0;
+                if (hint_type === "text"){
+                    var resultDiv = document.getElementById('result');
+                    resultDiv.textContent = hints[currentIndex];
+                }
+                else {
+                    // resultDiv.innerHTML = ""
+                    showHint()
+                    console.log("Image");
+                }
+                currentIndex++;
+            } else {
+                resultBox.style.backgroundColor = '#f8d7da';  // Error background color
+                resultBox.style.border = '1px solid #f5c6cb';   // Error border color
+                // resultBox.textContent = message;
+                alert(message);
+            }
+            // Add this block for better error handling
+            if (imageLinks) {
+                console.log('Image Links:', imageLinks);
+            } else {
+                console.error('No image links provided or an error occurred.');
+            }
+
+            resultBox.style.display = 'block';  // Show the result box
+        }
+
+        function checkSelectedOption() {
+            var selectedOptionElement = document.querySelector('input[name="selectedOption"]:checked');
+
+            if (!selectedOptionElement) {
+                alert('Please select an option before checking.');
+                return;
+            }
+
+            var selectedOption = selectedOptionElement.value;
+            if (selectedOption == target_vid_id){
+                animateCorrect();
+                // alert('Correct');
+                console.log("COrrentc");
+                checkYouTubeLink();
+            }
+            else{
+                animateIncorrect();
+                // alert('Incorrect');
+            }
+        }
+        function animateCorrect() {
+            // Add cracker burst animation for correct answer
+            var resultBox = document.getElementById('result-box');
+            resultBox.style.animation = 'burst 0.5s';
+            setTimeout(() => {
+                resultBox.style.animation = ''; // Reset animation
+            }, 500); // Adjust the duration as needed
+
+            // Display "Correct" text in the overlay
+            var overlayText = document.getElementById('overlay-text');
+            overlayText.textContent = 'Correct';
+            overlayText.style.color = '#28a745'; // Green color
+            overlayText.style.animation = 'fadeInOut 2s';
+            setTimeout(() => {
+                overlayText.textContent = ' '; // Reset text
+                overlayText.style.animation = ''; // Reset animation
+            }, 2000); // Adjust the duration as needed
+        }
+
+        function animateIncorrect() {
+            // Add vibrating animation for incorrect answer
+            var resultBox = document.getElementById('result-box');
+            resultBox.style.animation = 'vibrate 0.5s';
+            setTimeout(() => {
+                resultBox.style.animation = ''; // Reset animation
+            }, 500); // Adjust the duration as needed
+
+            // Display "Incorrect" text in the overlay
+            var overlayText = document.getElementById('overlay-text');
+            overlayText.textContent = 'Incorrect';
+            overlayText.style.color = '#dc3545'; // Red color
+            overlayText.style.animation = 'fadeInOut 2s';
+            setTimeout(() => {
+                overlayText.textContent = ' '; // Reset text
+                overlayText.style.animation = ''; // Reset animation
+            }, 2000); // Adjust the duration as needed
+        }
+
+        function setRadioButtonValue(option) {
+            var radio = document.getElementById('radio' + option);
+            radio.checked = !radio.checked;  // Toggle the checked state
+        }
+
+        function disableButtons() {
+            // Disable buttons
+            var buttons = document.querySelectorAll('button');
+            buttons.forEach(button => button.setAttribute('disabled', 'true'));
+        }
+
+        function enableButtons() {
+            // Enable buttons
+            var buttons = document.querySelectorAll('button');
+            buttons.forEach(button => button.removeAttribute('disabled'));
+        }
+
+        function showLoadingAnimation() {
+            // Display loading animation (you can customize this part)
+            var loadingContainer = document.getElementById('loading-container');
+            loadingContainer.style.display = 'flex';
+        }
+
+        function hideLoadingAnimation() {
+            // Hide loading animation
+
+            var loadingContainer = document.getElementById('loading-container');
+            loadingContainer.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
